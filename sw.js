@@ -1,12 +1,13 @@
 const CACHE = 'memo-v1';
+const BASE = '/webapp-shell/';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/sw.js',
-  '/icon.svg',
-  '/icon-192.png',
-  '/icon-512.png',
+  BASE,
+  BASE + 'index.html',
+  BASE + 'manifest.webmanifest',
+  BASE + 'sw.js',
+  BASE + 'icon.svg',
+  BASE + 'icon-192.png',
+  BASE + 'icon-512.png',
 ];
 
 self.addEventListener('install', e => {
