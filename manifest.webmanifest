@@ -1,14 +1,15 @@
 {
-  "name": "Memo — Quick Notes",
-  "short_name": "Memo",
-  "description": "A fast, offline-capable notes app. Works without internet.",
+  "name": "WebApp Shell",
+  "short_name": "Shell",
+  "description": "Render self-contained HTML pages, encoded in the URL, full-screen and offline.",
   "start_url": "/webapp-shell/",
   "scope": "/webapp-shell/",
   "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#007aff",
-  "background_color": "#f2f2f7",
-  "categories": ["productivity", "utilities"],
+  "display_override": ["standalone"],
+  "orientation": "any",
+  "theme_color": "#0b0b0c",
+  "background_color": "#0b0b0c",
+  "categories": ["productivity", "utilities", "developer"],
   "icons": [
     {
       "src": "icon.svg",

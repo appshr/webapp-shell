@@ -4,696 +4,416 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Memo">
-  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
-  <title>Memo — Quick Notes</title>
+  <meta name="apple-mobile-web-app-title" content="Shell">
+  <meta name="theme-color" content="#0b0b0c">
+  <title>WebApp Shell</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     :root {
-      --bg:        #f2f2f7;
-      --surface:   #ffffff;
-      --surface2:  #e5e5ea;
-      --text:      #1c1c1e;
-      --text2:     #3c3c43cc;
-      --text3:     #8e8e93;
-      --accent:    #007aff;
-      --accent-bg: #e8f0fe;
-      --danger:    #ff3b30;
-      --shadow:    0 1px 8px rgba(0,0,0,.08), 0 0 1px rgba(0,0,0,.04);
-      --nav-h:     52px;
-      --radius:    13px;
-      --st:        env(safe-area-inset-top, 0px);
-      --sb:        env(safe-area-inset-bottom, 0px);
-      --sl:        env(safe-area-inset-left, 0px);
-      --sr:        env(safe-area-inset-right, 0px);
+      --bg:      #0b0b0c;
+      --panel:   #18181b;
+      --panel2:  #232327;
+      --text:    #f4f4f5;
+      --text2:   #a1a1aa;
+      --accent:  #0a84ff;
+      --accent2: #0066d6;
+      --ok:      #30d158;
+      --warn:    #ff9f0a;
+      --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --st: env(safe-area-inset-top, 0px);
+      --sb: env(safe-area-inset-bottom, 0px);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg:        #1c1c1e;
-        --surface:   #2c2c2e;
-        --surface2:  #3a3a3c;
-        --text:      #ffffff;
-        --text2:     #ebebf599;
-        --text3:     #8e8e93;
-        --accent:    #0a84ff;
-        --accent-bg: #0a2040;
-        --shadow:    0 1px 8px rgba(0,0,0,.3), 0 0 1px rgba(0,0,0,.2);
-      }
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html { height: 100%; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
-      min-height: 100dvh;
-      overflow-x: hidden;
-      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
     }
 
-    /* ── Nav ── */
-    .nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      height: calc(var(--nav-h) + var(--st));
-      padding-top: var(--st);
-      padding-left: calc(16px + var(--sl));
-      padding-right: calc(16px + var(--sr));
-      background: color-mix(in srgb, var(--surface) 85%, transparent);
-      backdrop-filter: saturate(180%) blur(20px);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      border-bottom: .5px solid var(--surface2);
+    /* Splash shown until JS decides render vs builder */
+    #splash {
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      background: var(--bg); color: var(--text2); font-size: 14px;
+      z-index: 10;
+    }
+
+    /* ── Builder ── */
+    #builder {
+      max-width: 680px; margin: 0 auto;
+      padding: calc(28px + var(--st)) 20px calc(40px + var(--sb));
+    }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .brand img { width: 38px; height: 38px; border-radius: 9px; }
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
+    .tagline { color: var(--text2); font-size: 14px; line-height: 1.5; margin: 8px 0 22px; }
+
+    label.field { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+
+    textarea {
+      width: 100%; min-height: 230px; resize: vertical;
+      background: var(--panel); color: var(--text);
+      border: 1px solid var(--panel2); border-radius: 12px;
+      padding: 14px; font-family: var(--mono); font-size: 13px; line-height: 1.5;
+      outline: none; -webkit-appearance: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+
+    .controls {
       display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin: 14px 0 4px; flex-wrap: wrap;
     }
-    .nav-title { font-size: 17px; font-weight: 600; letter-spacing: -.3px; }
-    .nav-count  { font-size: 13px; color: var(--text3); margin-top: 1px; }
-    .nav-side   { display: flex; align-items: center; gap: 4px; }
-    .icon-btn {
-      width: 36px; height: 36px; border: none; background: none;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; color: var(--accent); transition: background .12s;
-    }
-    .icon-btn:active { background: var(--surface2); }
-    .icon-btn svg { width: 20px; height: 20px; }
+    .toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text2); cursor: pointer; }
+    .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .meta { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+    .meta.warn { color: var(--warn); }
 
-    /* ── Main scroll area ── */
-    .main {
-      padding-top: calc(var(--nav-h) + var(--st) + 18px);
-      padding-bottom: calc(88px + var(--sb));
-      padding-left: calc(16px + var(--sl));
-      padding-right: calc(16px + var(--sr));
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: none; border-radius: 11px; cursor: pointer;
+      font-family: var(--sans); font-size: 15px; font-weight: 600;
+      padding: 13px 18px; transition: opacity .12s, transform .12s;
     }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--accent); color: #fff; width: 100%; margin-top: 16px; }
+    .btn-ghost { background: var(--panel2); color: var(--text); }
+    .btn:disabled { opacity: .5; cursor: default; }
 
-    /* ── Notes grid ── */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+    /* output */
+    #out { margin-top: 20px; display: none; }
+    #out.show { display: block; }
+    .out-label { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+    .url-box {
+      width: 100%; background: var(--panel); color: var(--accent);
+      border: 1px solid var(--panel2); border-radius: 11px;
+      padding: 12px; font-family: var(--mono); font-size: 12px;
+      word-break: break-all; max-height: 120px; overflow: auto; line-height: 1.5;
+      -webkit-user-select: all; user-select: all;
     }
-    @media (min-width: 480px) { .grid { grid-template-columns: repeat(3, 1fr); } }
-    @media (min-width: 700px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+    .out-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .out-actions .btn { flex: 1; }
+    .copied { color: var(--ok); font-size: 13px; margin-top: 8px; height: 16px; transition: opacity .2s; }
 
-    /* ── Note card ── */
-    .card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 14px 14px 12px;
-      min-height: 110px;
-      display: flex; flex-direction: column; gap: 5px;
-      box-shadow: var(--shadow);
-      cursor: pointer;
-      transition: transform .12s, box-shadow .12s;
-      position: relative; overflow: hidden;
-      user-select: none;
+    /* details / help */
+    details {
+      margin-top: 26px; background: var(--panel); border: 1px solid var(--panel2);
+      border-radius: 12px; overflow: hidden;
     }
-    .card:active { transform: scale(.97); }
-    .card-title {
-      font-size: 14px; font-weight: 600; line-height: 1.3;
-      overflow: hidden; display: -webkit-box;
-      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    summary {
+      padding: 14px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+      list-style: none; display: flex; align-items: center; justify-content: space-between;
     }
-    .card-body {
-      font-size: 12px; color: var(--text3); line-height: 1.45; flex: 1;
-      overflow: hidden; display: -webkit-box;
-      -webkit-line-clamp: 5; -webkit-box-orient: vertical;
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; color: var(--text2); font-size: 18px; }
+    details[open] summary::after { content: '–'; }
+    .help { padding: 0 16px 16px; font-size: 13.5px; line-height: 1.6; color: var(--text2); }
+    .help h3 { color: var(--text); font-size: 14px; margin: 14px 0 6px; }
+    .help ol, .help ul { margin: 6px 0 6px 20px; }
+    .help li { margin: 5px 0; }
+    .help code {
+      font-family: var(--mono); font-size: 12px; background: var(--panel2);
+      padding: 2px 6px; border-radius: 5px; color: var(--text);
     }
-    .card-date { font-size: 10px; color: var(--text3); margin-top: 4px; }
-    .card-del {
-      position: absolute; top: 7px; right: 7px;
-      width: 22px; height: 22px; border: none;
-      background: var(--danger); color: #fff;
-      border-radius: 50%; font-size: 15px; line-height: 1;
-      cursor: pointer; display: none; align-items: center; justify-content: center;
-    }
-    .card.wiggle .card-del { display: flex; }
-    .card.wiggle { animation: wiggle .3s ease-in-out infinite alternate; }
-    @keyframes wiggle {
-      0%   { transform: rotate(-1.2deg); }
-      100% { transform: rotate(1.2deg); }
+    .help strong { color: var(--text); }
+
+    .notice {
+      margin-top: 22px; padding: 13px 15px; border-radius: 11px;
+      background: rgba(255,159,10,.1); border: 1px solid rgba(255,159,10,.25);
+      font-size: 12.5px; line-height: 1.55; color: #f5c97a;
     }
 
-    /* ── Empty state ── */
-    .empty {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 10px; text-align: center;
-      padding: 60px 32px;
+    /* ── Render mode (full-bleed app frame) ── */
+    html.rendering, body.rendering { background: #000; }
+    #appframe {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      border: 0; display: block; background: #fff;
     }
-    .empty svg { color: var(--text3); opacity: .35; width: 68px; height: 68px; }
-    .empty-title  { font-size: 20px; font-weight: 600; color: var(--text); }
-    .empty-sub    { font-size: 15px; color: var(--text3); line-height: 1.4; }
-
-    /* ── FAB ── */
-    .fab {
-      position: fixed;
-      bottom: calc(22px + var(--sb));
-      right: calc(22px + var(--sr));
-      width: 56px; height: 56px;
-      background: var(--accent); border: none; border-radius: 50%;
-      color: #fff; font-size: 30px; line-height: 1;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 18px rgba(0,122,255,.45);
-      transition: transform .12s, box-shadow .12s;
-      z-index: 50;
-    }
-    .fab:active { transform: scale(.92); box-shadow: 0 2px 8px rgba(0,122,255,.3); }
-
-    /* ── Overlay / Sheet base ── */
-    .overlay {
-      position: fixed; inset: 0; z-index: 200;
-      background: rgba(0,0,0,.45);
-      display: flex; align-items: flex-end;
-      opacity: 0; pointer-events: none;
-      transition: opacity .25s;
-    }
-    .overlay.open { opacity: 1; pointer-events: all; }
-
-    .sheet {
-      background: var(--surface);
-      border-radius: 20px 20px 0 0;
-      width: 100%;
-      transform: translateY(100%);
-      transition: transform .35s cubic-bezier(.32,.72,0,1);
-    }
-    .overlay.open .sheet { transform: translateY(0); }
-
-    .handle {
-      width: 36px; height: 4px; border-radius: 2px;
-      background: var(--surface2); margin: 10px auto;
-    }
-
-    /* ── Editor sheet ── */
-    .editor-sheet { max-height: 92dvh; display: flex; flex-direction: column; padding-bottom: var(--sb); }
-    .editor-hdr {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 4px 20px 10px; flex-shrink: 0;
-    }
-    .editor-hdr-title { font-size: 17px; font-weight: 600; }
-    .sheet-btn {
-      font-size: 17px; color: var(--accent); background: none;
-      border: none; cursor: pointer; padding: 4px 2px; font-family: inherit;
-    }
-    .sheet-btn.done { font-weight: 600; }
-    .editor-title-input {
-      width: 100%; border: none; background: none; outline: none;
-      font-size: 20px; font-weight: 700; color: var(--text);
-      padding: 0 20px 10px; font-family: inherit;
-    }
-    .editor-title-input::placeholder { color: var(--text3); }
-    .editor-divider { height: .5px; background: var(--surface2); margin: 0 20px 10px; flex-shrink: 0; }
-    .editor-body-input {
-      width: 100%; flex: 1; border: none; background: none; outline: none; resize: none;
-      font-size: 16px; line-height: 1.55; color: var(--text);
-      padding: 0 20px 20px; font-family: inherit; min-height: 180px;
-    }
-    .editor-body-input::placeholder { color: var(--text3); }
-
-    /* ── Install sheet ── */
-    .install-sheet {
-      max-height: 92dvh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      padding-bottom: 0;
-    }
-    .install-body {
-      padding: 0 24px calc(24px + var(--sb));
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      flex: 1;
-    }
-
-    .app-icon {
-      width: 72px; height: 72px; border-radius: 16px;
-      background: var(--accent); margin: 4px auto 18px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 6px 20px rgba(0,122,255,.35);
-    }
-    .app-icon svg { width: 42px; height: 42px; color: #fff; }
-
-    .install-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
-    .install-sub   { font-size: 15px; color: var(--text3); text-align: center; line-height: 1.45; margin-bottom: 26px; }
-
-    .steps { display: flex; flex-direction: column; gap: 18px; margin-bottom: 28px; }
-    .step  { display: flex; align-items: flex-start; gap: 14px; }
-    .step-ico {
-      width: 48px; height: 48px; flex-shrink: 0;
-      background: var(--accent-bg); border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--accent);
-    }
-    .step-ico svg { width: 26px; height: 26px; }
-    .step-text { flex: 1; padding-top: 3px; }
-    .step-label { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
-    .step-desc  { font-size: 13px; color: var(--text3); line-height: 1.4; }
-    .step-desc strong { color: var(--text); }
-
-    .install-note {
-      font-size: 12px; color: var(--text3); text-align: center;
-      margin-bottom: 16px; line-height: 1.4;
-    }
-
-    .btn-primary {
-      width: 100%; padding: 15px;
-      background: var(--accent); border: none; border-radius: var(--radius);
-      color: #fff; font-size: 17px; font-weight: 600;
-      cursor: pointer; font-family: inherit;
-      transition: opacity .12s;
-    }
-    .btn-primary:active { opacity: .8; }
-
-    /* ── Offline banner ── */
-    .offline-bar {
-      position: fixed;
-      top: calc(var(--nav-h) + var(--st) + 10px);
-      left: 50%; transform: translateX(-50%) translateY(-70px);
-      background: #1c1c1e; color: #fff;
-      font-size: 13px; padding: 8px 18px;
-      border-radius: 20px; z-index: 150;
-      transition: transform .3s cubic-bezier(.32,.72,0,1);
-      white-space: nowrap; pointer-events: none;
-    }
-    @media (prefers-color-scheme: dark) {
-      .offline-bar { background: #3a3a3c; }
-    }
-    .offline-bar.show { transform: translateX(-50%) translateY(0); }
-
-    /* ── Long-press hint ── */
-    .hint {
-      font-size: 12px; color: var(--text3); text-align: center;
-      margin-top: 16px; opacity: .7;
-    }
-
-    /* ── Standalone badge (shown only in browser) ── */
-    .pwa-badge {
-      display: none;
-      align-items: center; gap: 8px;
-      background: var(--accent); color: #fff;
-      font-size: 13px; font-weight: 500;
-      padding: 8px 14px; border-radius: 20px;
-      cursor: pointer; border: none; font-family: inherit;
-      margin-bottom: 20px;
-    }
-    .pwa-badge svg { width: 16px; height: 16px; flex-shrink: 0; }
   </style>
 </head>
 <body>
 
-<!-- ── Navigation ── -->
-<nav class="nav" id="nav">
-  <div>
-    <div class="nav-title">Memo</div>
-    <div class="nav-count" id="navCount"></div>
-  </div>
-  <div class="nav-side">
-    <button class="icon-btn" id="installBtn" aria-label="Add to Home Screen" title="Add to Home Screen">
-      <!-- Share / install icon -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-        <polyline points="16 6 12 2 8 6"/>
-        <line x1="12" y1="2" x2="12" y2="15"/>
-      </svg>
-    </button>
-  </div>
-</nav>
+<div id="splash">Loading…</div>
 
-<!-- ── Main content ── -->
-<main class="main" id="main">
-  <!-- Install prompt banner (browser only) -->
-  <button class="pwa-badge" id="pwaBadge" aria-label="Install app">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-      <polyline points="16 6 12 2 8 6"/>
-      <line x1="12" y1="2" x2="12" y2="15"/>
-    </svg>
-    Add Memo to Home Screen
-  </button>
+<main id="builder" hidden>
+  <div class="brand">
+    <img src="icon.svg" alt="" aria-hidden="true">
+    <h1>WebApp Shell</h1>
+  </div>
+  <p class="tagline">
+    Paste a self-contained HTML page below. The shell encodes it into a link that renders
+    your page full-screen on a real, persistent origin — works <strong style="color:var(--text)">fully offline</strong>
+    after the first load, and keeps <code>localStorage</code> between launches (unlike <code>data:</code> URLs).
+  </p>
 
-  <div id="notesContainer"></div>
+  <label class="field" for="html">Your HTML</label>
+  <textarea id="html" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+
+  <div class="controls">
+    <label class="toggle">
+      <input type="checkbox" id="gzip" checked>
+      Compress link <span id="gzipNote" style="opacity:.7"></span>
+    </label>
+    <span class="meta" id="sizeMeta"></span>
+  </div>
+
+  <button class="btn btn-primary" id="gen">Generate launch link</button>
+
+  <div id="out">
+    <div class="out-label">Launch URL</div>
+    <div class="url-box" id="url"></div>
+    <div class="out-actions">
+      <button class="btn btn-ghost" id="copy">Copy link</button>
+      <button class="btn btn-primary" id="open" style="margin-top:0">Open now</button>
+    </div>
+    <div class="copied" id="copied"></div>
+  </div>
+
+  <details>
+    <summary>How to use it (Shortcuts &amp; Home Screen)</summary>
+    <div class="help">
+      <h3>Open from the Shortcuts app</h3>
+      <ol>
+        <li>Tap <strong>Generate launch link</strong>, then <strong>Copy link</strong>.</li>
+        <li>In Shortcuts, add an <strong>“Open URLs”</strong> action and paste the link.</li>
+        <li>Running the shortcut opens your app in Safari — it runs offline and remembers its data.</li>
+      </ol>
+      <p style="margin-top:8px">Note: Shortcuts opens links in Safari (with its minimal toolbar). That's the same
+      behavior your old <code>data:</code> URLs had. iOS does not let Shortcuts launch directly into a
+      chrome-free standalone window.</p>
+
+      <h3>True full-screen (no Safari chrome)</h3>
+      <ol>
+        <li>Tap <strong>Open now</strong> to load your app.</li>
+        <li>In Safari tap <strong>Share → Add to Home Screen → Add</strong>.</li>
+        <li>That icon launches your app full-screen, offline, with its own storage.</li>
+      </ol>
+
+      <h3>Why not <code>webapp://</code>?</h3>
+      <p>Custom URL schemes can only be registered by native apps on iOS, so a web page can't claim
+      <code>webapp://</code>. Use the <code>https://</code> link this tool generates instead — it does
+      everything the scheme was meant to do.</p>
+
+      <h3>Offline</h3>
+      <p>The first time you load the shell online, a service worker caches it permanently. After that the
+      shell and every link you generate work with no network. Your app only needs the internet if its own
+      code fetches something external (CDN scripts, APIs, etc.) — keep apps self-contained to stay 100% offline.</p>
+    </div>
+  </details>
+
+  <div class="notice">
+    ⚠︎ Anything you load runs on this origin (<code id="origin"></code>) with full access to its storage.
+    Only open links you created or trust — a malicious page could read or wipe the data of your other shell apps.
+  </div>
 </main>
-
-<!-- ── FAB ── -->
-<button class="fab" id="fab" aria-label="New note">+</button>
-
-<!-- ── Editor Sheet ── -->
-<div class="overlay" id="editorOverlay" role="dialog" aria-modal="true" aria-label="Note editor">
-  <div class="sheet editor-sheet" id="editorSheet">
-    <div class="handle"></div>
-    <div class="editor-hdr">
-      <button class="sheet-btn" id="editorCancel">Cancel</button>
-      <span class="editor-hdr-title" id="editorHeading">New Note</span>
-      <button class="sheet-btn done" id="editorSave">Save</button>
-    </div>
-    <input  class="editor-title-input" id="editorTitle" placeholder="Title" maxlength="120" autocomplete="off" spellcheck="true">
-    <div class="editor-divider"></div>
-    <textarea class="editor-body-input" id="editorBody" placeholder="Write something…" spellcheck="true"></textarea>
-  </div>
-</div>
-
-<!-- ── Install Sheet ── -->
-<div class="overlay" id="installOverlay" role="dialog" aria-modal="true" aria-label="Install instructions">
-  <div class="sheet install-sheet" id="installSheet">
-    <div class="handle"></div>
-    <div class="install-body">
-
-      <!-- App icon -->
-      <div class="app-icon" aria-hidden="true">
-        <svg viewBox="0 0 100 100" fill="currentColor">
-          <rect x="12" y="32" width="76" height="10" rx="5"/>
-          <rect x="12" y="50" width="76" height="10" rx="5"/>
-          <rect x="12" y="68" width="48" height="10" rx="5"/>
-        </svg>
-      </div>
-
-      <h2 class="install-title">Add to Home Screen</h2>
-      <p  class="install-sub">Use Memo like a native app — no browser chrome, works offline, saves to your Home Screen.</p>
-
-      <div class="steps">
-
-        <!-- Step 1: Open in Safari -->
-        <div class="install-step-wrap" id="safariStep">
-          <div class="step">
-            <div class="step-ico" aria-hidden="true">
-              <!-- Safari compass icon -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" stroke="none"/>
-              </svg>
-            </div>
-            <div class="step-text">
-              <div class="step-label">1. Open in Safari</div>
-              <div class="step-desc">This page must be open in <strong>Safari</strong> — not Chrome or another browser.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 2: Tap Share -->
-        <div class="step">
-          <div class="step-ico" aria-hidden="true">
-            <!-- Share arrow icon (matches Safari's button) -->
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-              <polyline points="16 6 12 2 8 6"/>
-              <line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
-          </div>
-          <div class="step-text">
-            <div class="step-label">2. Tap the Share button</div>
-            <div class="step-desc">Find the <strong>Share ↑</strong> icon in Safari's toolbar — it's at the bottom of the screen on iPhone.</div>
-          </div>
-        </div>
-
-        <!-- Step 3: Add to Home Screen -->
-        <div class="step">
-          <div class="step-ico" aria-hidden="true">
-            <!-- Plus-in-square icon -->
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="3"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8"  y1="12" x2="16" y2="12"/>
-            </svg>
-          </div>
-          <div class="step-text">
-            <div class="step-label">3. "Add to Home Screen"</div>
-            <div class="step-desc">Scroll down in the Share sheet and tap <strong>"Add to Home Screen"</strong>.</div>
-          </div>
-        </div>
-
-        <!-- Step 4: Confirm -->
-        <div class="step">
-          <div class="step-ico" aria-hidden="true">
-            <!-- Checkmark icon -->
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-          <div class="step-text">
-            <div class="step-label">4. Tap "Add"</div>
-            <div class="step-desc">Tap <strong>"Add"</strong> in the top-right corner to install Memo on your Home Screen.</div>
-          </div>
-        </div>
-
-      </div>
-
-      <p class="install-note" id="installNote">
-        Once installed, Memo opens full-screen with no browser bars and works fully offline.
-      </p>
-
-      <button class="btn-primary" id="installDismiss">Got It</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Offline banner ── -->
-<div class="offline-bar" id="offlineBar" aria-live="polite">
-  📶 You're offline — notes are saved locally
-</div>
 
 <script>
 'use strict';
 
-// ── Storage ──────────────────────────────────────────────────────────────────
-const STORE_KEY = 'memo_notes_v1';
-
-function loadNotes() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
-  catch { return []; }
-}
-
-function saveNotes(notes) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(notes));
-}
-
-// ── State ─────────────────────────────────────────────────────────────────────
-let notes = loadNotes();
-let editingId = null;
-let wiggling  = false;
-
-// ── DOM refs ─────────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-
-const navCount       = $('navCount');
-const notesContainer = $('notesContainer');
-const pwaBadge       = $('pwaBadge');
-
-const editorOverlay  = $('editorOverlay');
-const editorHeading  = $('editorHeading');
-const editorTitle    = $('editorTitle');
-const editorBody     = $('editorBody');
-
-const installOverlay = $('installOverlay');
-const offlineBar     = $('offlineBar');
-const safariStep     = $('safariStep');
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-function fmtDate(ts) {
-  const d = new Date(ts);
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60000)    return 'Just now';
-  if (diff < 3600000)  return Math.floor(diff/60000) + 'm ago';
-  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
-  if (d.getFullYear() === now.getFullYear())
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-const isStandalone = () =>
-  window.matchMedia('(display-mode: standalone)').matches ||
-  navigator.standalone === true;
-
-// ── Render ────────────────────────────────────────────────────────────────────
-function render() {
-  navCount.textContent = notes.length
-    ? notes.length + (notes.length === 1 ? ' note' : ' notes')
-    : '';
-
-  // Show install badge in browser only
-  pwaBadge.style.display = (!isStandalone() && notes.length === 0) ? 'flex' : 'none';
-
-  if (notes.length === 0) {
-    notesContainer.innerHTML = `
-      <div class="empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-        <div class="empty-title">No notes yet</div>
-        <div class="empty-sub">Tap <strong>+</strong> to write your first note.<br>Everything is saved on your device.</div>
-      </div>`;
-    return;
-  }
-
-  const sorted = [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
-  notesContainer.innerHTML = `
-    <div class="grid" id="grid">
-      ${sorted.map(n => `
-        <div class="card${wiggling ? ' wiggle' : ''}" data-id="${n.id}" role="button" tabindex="0" aria-label="${escHtml(n.title || 'Untitled')}">
-          ${n.title ? `<div class="card-title">${escHtml(n.title)}</div>` : ''}
-          ${n.body  ? `<div class="card-body">${escHtml(n.body)}</div>` : ''}
-          <div class="card-date">${fmtDate(n.updatedAt)}</div>
-          <button class="card-del" data-id="${n.id}" aria-label="Delete note" tabindex="-1">×</button>
-        </div>
-      `).join('')}
-    </div>
-    ${notes.length > 1 ? '<div class="hint">Hold a note to delete it</div>' : ''}`;
-}
-
-// ── Open / close editor ───────────────────────────────────────────────────────
-function openEditor(note = null) {
-  editingId = note ? note.id : null;
-  editorHeading.textContent = note ? 'Edit Note' : 'New Note';
-  editorTitle.value = note ? note.title : '';
-  editorBody.value  = note ? note.body  : '';
-  editorOverlay.classList.add('open');
-  setTimeout(() => (note ? editorBody : editorTitle).focus(), 350);
-}
-
-function closeEditor() {
-  editorOverlay.classList.remove('open');
-  editorTitle.blur();
-  editorBody.blur();
-}
-
-function saveNote() {
-  const title = editorTitle.value.trim();
-  const body  = editorBody.value.trim();
-  if (!title && !body) { closeEditor(); return; }
-
-  if (editingId) {
-    const n = notes.find(n => n.id === editingId);
-    if (n) { n.title = title; n.body = body; n.updatedAt = Date.now(); }
-  } else {
-    notes.push({ id: uid(), title, body, createdAt: Date.now(), updatedAt: Date.now() });
-  }
-  saveNotes(notes);
-  closeEditor();
-  render();
-}
-
-// ── Delete note ───────────────────────────────────────────────────────────────
-function deleteNote(id) {
-  notes = notes.filter(n => n.id !== id);
-  saveNotes(notes);
-  if (notes.length === 0) wiggling = false;
-  render();
-}
-
-function stopWiggle() {
-  wiggling = false;
-  render();
-}
-
-// ── Install sheet ─────────────────────────────────────────────────────────────
-function openInstall() {
-  // Show "open in Safari" step only when not already in Safari/standalone
-  safariStep.style.display = isStandalone() ? 'none' : '';
-  installOverlay.classList.add('open');
-}
-
-function closeInstall() {
-  installOverlay.classList.remove('open');
-  localStorage.setItem('memo_install_seen', '1');
-}
-
-// ── Offline detection ─────────────────────────────────────────────────────────
-function updateOnlineStatus() {
-  if (!navigator.onLine) {
-    offlineBar.classList.add('show');
-  } else {
-    offlineBar.classList.remove('show');
-  }
-}
-
-// ── Event wiring ──────────────────────────────────────────────────────────────
-$('fab').addEventListener('click', () => { stopWiggle(); openEditor(); });
-$('installBtn').addEventListener('click', openInstall);
-$('pwaBadge').addEventListener('click', openInstall);
-
-$('editorCancel').addEventListener('click', closeEditor);
-$('editorSave').addEventListener('click', saveNote);
-$('installDismiss').addEventListener('click', closeInstall);
-
-// Close overlays on background tap
-editorOverlay.addEventListener('click', e => { if (e.target === editorOverlay) closeEditor(); });
-installOverlay.addEventListener('click', e => { if (e.target === installOverlay) closeInstall(); });
-
-// Keyboard
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeEditor(); closeInstall(); stopWiggle(); }
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') saveNote();
-});
-
-// Note card interactions (tap to edit, long-press to wiggle)
-let longPressTimer = null;
-notesContainer.addEventListener('pointerdown', e => {
-  const card = e.target.closest('.card');
-  if (!card) return;
-  longPressTimer = setTimeout(() => {
-    longPressTimer = null;
-    wiggling = true;
-    render();
-    if (navigator.vibrate) navigator.vibrate(10);
-  }, 500);
-});
-
-notesContainer.addEventListener('pointerup',     () => clearTimeout(longPressTimer));
-notesContainer.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
-
-notesContainer.addEventListener('click', e => {
-  // Delete button
-  const delBtn = e.target.closest('.card-del');
-  if (delBtn) {
-    e.stopPropagation();
-    deleteNote(delBtn.dataset.id);
-    return;
-  }
-  // Tap card
-  const card = e.target.closest('.card');
-  if (!card) return;
-  if (wiggling) { stopWiggle(); return; }
-  const note = notes.find(n => n.id === card.dataset.id);
-  if (note) openEditor(note);
-});
-
-// Tap outside cards to stop wiggle
-document.addEventListener('click', e => {
-  if (wiggling && !e.target.closest('.card') && !e.target.closest('.fab')) {
-    stopWiggle();
-  }
-});
-
-window.addEventListener('online',  updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-// Only react to events — don't eagerly show the banner on page load
-
-// ── Auto-show install prompt on first visit (Safari only) ────────────────────
-if (!isStandalone() && !localStorage.getItem('memo_install_seen')) {
-  // Small delay so the page paints first
-  setTimeout(openInstall, 1200);
-}
-
-// ── Service Worker ────────────────────────────────────────────────────────────
+/* Register the service worker as early as possible so the shell keeps working offline. */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').catch(function(){});
+}
+
+/* ───────── base64url <-> bytes (UTF-8 safe) ───────── */
+function b64urlFromBytes(bytes) {
+  var bin = '', CH = 0x8000;
+  for (var i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  }
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function bytesFromB64url(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  var bin = atob(s), out = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/* ───────── optional gzip via Compression Streams (Safari 16.4+) ───────── */
+var GZIP_OK = (typeof CompressionStream !== 'undefined');
+async function gzip(bytes) {
+  var s = new Response(bytes).body.pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+async function gunzip(bytes) {
+  var s = new Response(bytes).body.pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+
+/* ───────── encode / decode payload ───────── */
+async function encodeHTML(html, useGzip) {
+  var bytes = new TextEncoder().encode(html);
+  if (useGzip && GZIP_OK) {
+    return 'appz=' + b64urlFromBytes(await gzip(bytes));
+  }
+  return 'app=' + b64urlFromBytes(bytes);
+}
+async function decodePayload(params) {
+  if (params.has('appz')) {
+    return new TextDecoder().decode(await gunzip(bytesFromB64url(params.get('appz'))));
+  }
+  if (params.has('app')) {
+    return new TextDecoder().decode(bytesFromB64url(params.get('app')));
+  }
+  return null;
+}
+
+/* ───────── inject full-screen / viewport metas if the page lacks them ───────── */
+function ensureMetas(html) {
+  var inject = '';
+  if (!/apple-mobile-web-app-capable/i.test(html)) {
+    inject += '<meta name="apple-mobile-web-app-capable" content="yes">' +
+              '<meta name="mobile-web-app-capable" content="yes">' +
+              '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">';
+  }
+  if (!/name=["']viewport["']/i.test(html)) {
+    inject += '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">';
+  }
+  if (!inject) return html;
+  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, function (m) { return m + inject; });
+  if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, function (m) { return m + '<head>' + inject + '</head>'; });
+  return '<head>' + inject + '</head>' + html;
+}
+
+/* ───────── render an app full-screen via an iframe (isolated, same-origin) ───────── */
+function renderApp(html) {
+  document.documentElement.classList.add('rendering');
+  document.body.classList.add('rendering');
+  var b = document.getElementById('builder'); if (b) b.remove();
+  var s = document.getElementById('splash'); if (s) s.remove();
+
+  var f = document.createElement('iframe');
+  f.id = 'appframe';
+  f.setAttribute('allow', 'autoplay; camera; microphone; clipboard-write; clipboard-read; geolocation; fullscreen');
+  f.srcdoc = html;
+  document.body.appendChild(f);
+
+  var m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (m && m[1].trim()) document.title = m[1].trim();
+}
+
+/* ───────── builder UI ───────── */
+function initBuilder() {
+  var s = document.getElementById('splash'); if (s) s.remove();
+  var builder = document.getElementById('builder');
+  builder.hidden = false;
+
+  document.getElementById('origin').textContent = location.origin;
+
+  var ta      = document.getElementById('html');
+  var gzipBox = document.getElementById('gzip');
+  var sizeMeta= document.getElementById('sizeMeta');
+  var gen     = document.getElementById('gen');
+  var out     = document.getElementById('out');
+  var urlBox  = document.getElementById('url');
+  var copyBtn = document.getElementById('copy');
+  var openBtn = document.getElementById('open');
+  var copied  = document.getElementById('copied');
+
+  if (!GZIP_OK) {
+    gzipBox.checked = false; gzipBox.disabled = true;
+    document.getElementById('gzipNote').textContent = '(unavailable)';
+  }
+
+  ta.value = DEMO;
+
+  var lastUrl = '';
+
+  function updateSize() {
+    var bytes = new TextEncoder().encode(ta.value).length;
+    sizeMeta.textContent = bytes.toLocaleString() + ' bytes';
+    sizeMeta.classList.remove('warn');
+  }
+  ta.addEventListener('input', function () { updateSize(); out.classList.remove('show'); });
+  updateSize();
+
+  gen.addEventListener('click', async function () {
+    var html = ensureMetas(ta.value);
+    var param = await encodeHTML(html, gzipBox.checked);
+    lastUrl = location.origin + location.pathname + '#' + param;
+    urlBox.textContent = lastUrl;
+    out.classList.add('show');
+    copied.textContent = '';
+
+    var len = lastUrl.length;
+    sizeMeta.textContent = 'link: ' + len.toLocaleString() + ' chars';
+    if (len > 60000) {
+      sizeMeta.textContent += ' — long links may not survive Add to Home Screen';
+      sizeMeta.classList.add('warn');
+    } else {
+      sizeMeta.classList.remove('warn');
+    }
+    out.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  copyBtn.addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText(lastUrl);
+      copied.textContent = '✓ Copied to clipboard';
+    } catch (e) {
+      var r = document.createRange(); r.selectNodeContents(urlBox);
+      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      copied.textContent = 'Selected — long-press to Copy';
+    }
+    setTimeout(function () { copied.textContent = ''; }, 2500);
+  });
+
+  openBtn.addEventListener('click', function () {
+    if (!lastUrl) return;
+    location.href = lastUrl;
+    location.reload();
   });
 }
 
-// ── Initial render ────────────────────────────────────────────────────────────
-render();
+/* ───────── starter demo (note: closing script tag is written as <\/script>) ───────── */
+var DEMO = [
+'<!DOCTYPE html>',
+'<html lang="en"><head><meta charset="utf-8">',
+'<title>Tap Counter</title>',
+'<style>',
+'  html,body{height:100%;margin:0;font-family:-apple-system,system-ui,sans-serif;',
+'    background:#0a84ff;color:#fff;display:flex;flex-direction:column;',
+'    align-items:center;justify-content:center;gap:24px;-webkit-user-select:none}',
+'  h1{font-size:15px;font-weight:600;opacity:.85;letter-spacing:.3px;text-transform:uppercase}',
+'  #n{font-size:96px;font-weight:800;font-variant-numeric:tabular-nums}',
+'  button{font-size:22px;font-weight:700;padding:16px 40px;border:0;border-radius:16px;',
+'    background:#fff;color:#0a84ff}',
+'  small{opacity:.75;font-size:13px}',
+'</style></head><body>',
+'  <h1>Offline &amp; persistent</h1>',
+'  <div id="n">0</div>',
+'  <button id="b">Tap +1</button>',
+'  <small>Stored locally — survives reloads &amp; airplane mode</small>',
+'  <script>',
+'    var n = +(localStorage.getItem("count") || 0);',
+'    var el = document.getElementById("n"); el.textContent = n;',
+'    document.getElementById("b").onclick = function(){',
+'      n++; el.textContent = n; localStorage.setItem("count", n);',
+'    };',
+'  <\/script>',
+'</body></html>'
+].join('\n');
+
+/* ───────── boot: render if a payload is present, else show the builder ───────── */
+(async function boot() {
+  var raw = location.hash.slice(1) || location.search.slice(1);
+  var params = new URLSearchParams(raw);
+  try {
+    var html = await decodePayload(params);
+    if (html != null) { renderApp(html); return; }
+  } catch (e) {
+    var sp = document.getElementById('splash');
+    if (sp) sp.textContent = 'Could not decode this link. Showing the builder…';
+  }
+  initBuilder();
+})();
 </script>
 </body>
 </html>
