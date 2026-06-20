@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Memo">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <title>Memo — Quick Notes</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    :root {
+      --bg:        #f2f2f7;
+      --surface:   #ffffff;
+      --surface2:  #e5e5ea;
+      --text:      #1c1c1e;
+      --text2:     #3c3c43cc;
+      --text3:     #8e8e93;
+      --accent:    #007aff;
+      --accent-bg: #e8f0fe;
+      --danger:    #ff3b30;
+      --shadow:    0 1px 8px rgba(0,0,0,.08), 0 0 1px rgba(0,0,0,.04);
+      --nav-h:     52px;
+      --radius:    13px;
+      --st:        env(safe-area-inset-top, 0px);
+      --sb:        env(safe-area-inset-bottom, 0px);
+      --sl:        env(safe-area-inset-left, 0px);
+      --sr:        env(safe-area-inset-right, 0px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #1c1c1e;
+        --surface:   #2c2c2e;
+        --surface2:  #3a3a3c;
+        --text:      #ffffff;
+        --text2:     #ebebf599;
+        --text3:     #8e8e93;
+        --accent:    #0a84ff;
+        --accent-bg: #0a2040;
+        --shadow:    0 1px 8px rgba(0,0,0,.3), 0 0 1px rgba(0,0,0,.2);
+      }
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: calc(var(--nav-h) + var(--st));
+      padding-top: var(--st);
+      padding-left: calc(16px + var(--sl));
+      padding-right: calc(16px + var(--sr));
+      background: color-mix(in srgb, var(--surface) 85%, transparent);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: .5px solid var(--surface2);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-title { font-size: 17px; font-weight: 600; letter-spacing: -.3px; }
+    .nav-count  { font-size: 13px; color: var(--text3); margin-top: 1px; }
+    .nav-side   { display: flex; align-items: center; gap: 4px; }
+    .icon-btn {
+      width: 36px; height: 36px; border: none; background: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--accent); transition: background .12s;
+    }
+    .icon-btn:active { background: var(--surface2); }
+    .icon-btn svg { width: 20px; height: 20px; }
+
+    /* ── Main scroll area ── */
+    .main {
+      padding-top: calc(var(--nav-h) + var(--st) + 18px);
+      padding-bottom: calc(88px + var(--sb));
+      padding-left: calc(16px + var(--sl));
+      padding-right: calc(16px + var(--sr));
+    }
+
+    /* ── Notes grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (min-width: 480px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 700px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+    /* ── Note card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 14px 12px;
+      min-height: 110px;
+      display: flex; flex-direction: column; gap: 5px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s;
+      position: relative; overflow: hidden;
+      user-select: none;
+    }
+    .card:active { transform: scale(.97); }
+    .card-title {
+      font-size: 14px; font-weight: 600; line-height: 1.3;
+      overflow: hidden; display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .card-body {
+      font-size: 12px; color: var(--text3); line-height: 1.45; flex: 1;
+      overflow: hidden; display: -webkit-box;
+      -webkit-line-clamp: 5; -webkit-box-orient: vertical;
+    }
+    .card-date { font-size: 10px; color: var(--text3); margin-top: 4px; }
+    .card-del {
+      position: absolute; top: 7px; right: 7px;
+      width: 22px; height: 22px; border: none;
+      background: var(--danger); color: #fff;
+      border-radius: 50%; font-size: 15px; line-height: 1;
+      cursor: pointer; display: none; align-items: center; justify-content: center;
+    }
+    .card.wiggle .card-del { display: flex; }
+    .card.wiggle { animation: wiggle .3s ease-in-out infinite alternate; }
+    @keyframes wiggle {
+      0%   { transform: rotate(-1.2deg); }
+      100% { transform: rotate(1.2deg); }
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; text-align: center;
+      padding: 60px 32px;
+    }
+    .empty svg { color: var(--text3); opacity: .35; width: 68px; height: 68px; }
+    .empty-title  { font-size: 20px; font-weight: 600; color: var(--text); }
+    .empty-sub    { font-size: 15px; color: var(--text3); line-height: 1.4; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(22px + var(--sb));
+      right: calc(22px + var(--sr));
+      width: 56px; height: 56px;
+      background: var(--accent); border: none; border-radius: 50%;
+      color: #fff; font-size: 30px; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 18px rgba(0,122,255,.45);
+      transition: transform .12s, box-shadow .12s;
+      z-index: 50;
+    }
+    .fab:active { transform: scale(.92); box-shadow: 0 2px 8px rgba(0,122,255,.3); }
+
+    /* ── Overlay / Sheet base ── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .sheet {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      transform: translateY(100%);
+      transition: transform .35s cubic-bezier(.32,.72,0,1);
+    }
+    .overlay.open .sheet { transform: translateY(0); }
+
+    .handle {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: var(--surface2); margin: 10px auto;
+    }
+
+    /* ── Editor sheet ── */
+    .editor-sheet { max-height: 92dvh; display: flex; flex-direction: column; padding-bottom: var(--sb); }
+    .editor-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 20px 10px; flex-shrink: 0;
+    }
+    .editor-hdr-title { font-size: 17px; font-weight: 600; }
+    .sheet-btn {
+      font-size: 17px; color: var(--accent); background: none;
+      border: none; cursor: pointer; padding: 4px 2px; font-family: inherit;
+    }
+    .sheet-btn.done { font-weight: 600; }
+    .editor-title-input {
+      width: 100%; border: none; background: none; outline: none;
+      font-size: 20px; font-weight: 700; color: var(--text);
+      padding: 0 20px 10px; font-family: inherit;
+    }
+    .editor-title-input::placeholder { color: var(--text3); }
+    .editor-divider { height: .5px; background: var(--surface2); margin: 0 20px 10px; flex-shrink: 0; }
+    .editor-body-input {
+      width: 100%; flex: 1; border: none; background: none; outline: none; resize: none;
+      font-size: 16px; line-height: 1.55; color: var(--text);
+      padding: 0 20px 20px; font-family: inherit; min-height: 180px;
+    }
+    .editor-body-input::placeholder { color: var(--text3); }
+
+    /* ── Install sheet ── */
+    .install-sheet { padding-bottom: calc(24px + var(--sb)); }
+    .install-body  { padding: 0 24px 20px; }
+
+    .app-icon {
+      width: 72px; height: 72px; border-radius: 16px;
+      background: var(--accent); margin: 4px auto 18px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 20px rgba(0,122,255,.35);
+    }
+    .app-icon svg { width: 42px; height: 42px; color: #fff; }
+
+    .install-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    .install-sub   { font-size: 15px; color: var(--text3); text-align: center; line-height: 1.45; margin-bottom: 26px; }
+
+    .steps { display: flex; flex-direction: column; gap: 18px; margin-bottom: 28px; }
+    .step  { display: flex; align-items: flex-start; gap: 14px; }
+    .step-ico {
+      width: 48px; height: 48px; flex-shrink: 0;
+      background: var(--accent-bg); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent);
+    }
+    .step-ico svg { width: 26px; height: 26px; }
+    .step-text { flex: 1; padding-top: 3px; }
+    .step-label { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .step-desc  { font-size: 13px; color: var(--text3); line-height: 1.4; }
+    .step-desc strong { color: var(--text); }
+
+    .install-note {
+      font-size: 12px; color: var(--text3); text-align: center;
+      margin-bottom: 16px; line-height: 1.4;
+    }
+
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: var(--accent); border: none; border-radius: var(--radius);
+      color: #fff; font-size: 17px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: opacity .12s;
+    }
+    .btn-primary:active { opacity: .8; }
+
+    /* ── Offline banner ── */
+    .offline-bar {
+      position: fixed;
+      top: calc(var(--nav-h) + var(--st) + 10px);
+      left: 50%; transform: translateX(-50%) translateY(-70px);
+      background: #1c1c1e; color: #fff;
+      font-size: 13px; padding: 8px 18px;
+      border-radius: 20px; z-index: 150;
+      transition: transform .3s cubic-bezier(.32,.72,0,1);
+      white-space: nowrap; pointer-events: none;
+    }
+    @media (prefers-color-scheme: dark) {
+      .offline-bar { background: #3a3a3c; }
+    }
+    .offline-bar.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Long-press hint ── */
+    .hint {
+      font-size: 12px; color: var(--text3); text-align: center;
+      margin-top: 16px; opacity: .7;
+    }
+
+    /* ── Standalone badge (shown only in browser) ── */
+    .pwa-badge {
+      display: none;
+      align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      font-size: 13px; font-weight: 500;
+      padding: 8px 14px; border-radius: 20px;
+      cursor: pointer; border: none; font-family: inherit;
+      margin-bottom: 20px;
+    }
+    .pwa-badge svg { width: 16px; height: 16px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav" id="nav">
+  <div>
+    <div class="nav-title">Memo</div>
+    <div class="nav-count" id="navCount"></div>
+  </div>
+  <div class="nav-side">
+    <button class="icon-btn" id="installBtn" aria-label="Add to Home Screen" title="Add to Home Screen">
+      <!-- Share / install icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+        <polyline points="16 6 12 2 8 6"/>
+        <line x1="12" y1="2" x2="12" y2="15"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ── Main content ── -->
+<main class="main" id="main">
+  <!-- Install prompt banner (browser only) -->
+  <button class="pwa-badge" id="pwaBadge" aria-label="Install app">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+      <polyline points="16 6 12 2 8 6"/>
+      <line x1="12" y1="2" x2="12" y2="15"/>
+    </svg>
+    Add Memo to Home Screen
+  </button>
+
+  <div id="notesContainer"></div>
+</main>
+
+<!-- ── FAB ── -->
+<button class="fab" id="fab" aria-label="New note">+</button>
+
+<!-- ── Editor Sheet ── -->
+<div class="overlay" id="editorOverlay" role="dialog" aria-modal="true" aria-label="Note editor">
+  <div class="sheet editor-sheet" id="editorSheet">
+    <div class="handle"></div>
+    <div class="editor-hdr">
+      <button class="sheet-btn" id="editorCancel">Cancel</button>
+      <span class="editor-hdr-title" id="editorHeading">New Note</span>
+      <button class="sheet-btn done" id="editorSave">Save</button>
+    </div>
+    <input  class="editor-title-input" id="editorTitle" placeholder="Title" maxlength="120" autocomplete="off" spellcheck="true">
+    <div class="editor-divider"></div>
+    <textarea class="editor-body-input" id="editorBody" placeholder="Write something…" spellcheck="true"></textarea>
+  </div>
+</div>
+
+<!-- ── Install Sheet ── -->
+<div class="overlay" id="installOverlay" role="dialog" aria-modal="true" aria-label="Install instructions">
+  <div class="sheet install-sheet" id="installSheet">
+    <div class="handle"></div>
+    <div class="install-body">
+
+      <!-- App icon -->
+      <div class="app-icon" aria-hidden="true">
+        <svg viewBox="0 0 100 100" fill="currentColor">
+          <rect x="12" y="32" width="76" height="10" rx="5"/>
+          <rect x="12" y="50" width="76" height="10" rx="5"/>
+          <rect x="12" y="68" width="48" height="10" rx="5"/>
+        </svg>
+      </div>
+
+      <h2 class="install-title">Add to Home Screen</h2>
+      <p  class="install-sub">Use Memo like a native app — no browser chrome, works offline, saves to your Home Screen.</p>
+
+      <div class="steps">
+
+        <!-- Step 1: Open in Safari -->
+        <div class="install-step-wrap" id="safariStep">
+          <div class="step">
+            <div class="step-ico" aria-hidden="true">
+              <!-- Safari compass icon -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+            <div class="step-text">
+              <div class="step-label">1. Open in Safari</div>
+              <div class="step-desc">This page must be open in <strong>Safari</strong> — not Chrome or another browser.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Tap Share -->
+        <div class="step">
+          <div class="step-ico" aria-hidden="true">
+            <!-- Share arrow icon (matches Safari's button) -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+              <polyline points="16 6 12 2 8 6"/>
+              <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="step-text">
+            <div class="step-label">2. Tap the Share button</div>
+            <div class="step-desc">Find the <strong>Share ↑</strong> icon in Safari's toolbar — it's at the bottom of the screen on iPhone.</div>
+          </div>
+        </div>
+
+        <!-- Step 3: Add to Home Screen -->
+        <div class="step">
+          <div class="step-ico" aria-hidden="true">
+            <!-- Plus-in-square icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8"  y1="12" x2="16" y2="12"/>
+            </svg>
+          </div>
+          <div class="step-text">
+            <div class="step-label">3. "Add to Home Screen"</div>
+            <div class="step-desc">Scroll down in the Share sheet and tap <strong>"Add to Home Screen"</strong>.</div>
+          </div>
+        </div>
+
+        <!-- Step 4: Confirm -->
+        <div class="step">
+          <div class="step-ico" aria-hidden="true">
+            <!-- Checkmark icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <div class="step-text">
+            <div class="step-label">4. Tap "Add"</div>
+            <div class="step-desc">Tap <strong>"Add"</strong> in the top-right corner to install Memo on your Home Screen.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="install-note" id="installNote">
+        Once installed, Memo opens full-screen with no browser bars and works fully offline.
+      </p>
+
+      <button class="btn-primary" id="installDismiss">Got It</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Offline banner ── -->
+<div class="offline-bar" id="offlineBar" aria-live="polite">
+  📶 You're offline — notes are saved locally
+</div>
+
+<script>
+'use strict';
+
+// ── Storage ──────────────────────────────────────────────────────────────────
+const STORE_KEY = 'memo_notes_v1';
+
+function loadNotes() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveNotes(notes) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(notes));
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let notes = loadNotes();
+let editingId = null;
+let wiggling  = false;
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const navCount       = $('navCount');
+const notesContainer = $('notesContainer');
+const pwaBadge       = $('pwaBadge');
+
+const editorOverlay  = $('editorOverlay');
+const editorHeading  = $('editorHeading');
+const editorTitle    = $('editorTitle');
+const editorBody     = $('editorBody');
+
+const installOverlay = $('installOverlay');
+const offlineBar     = $('offlineBar');
+const safariStep     = $('safariStep');
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000)    return 'Just now';
+  if (diff < 3600000)  return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  if (d.getFullYear() === now.getFullYear())
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches ||
+  navigator.standalone === true;
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  navCount.textContent = notes.length
+    ? notes.length + (notes.length === 1 ? ' note' : ' notes')
+    : '';
+
+  // Show install badge in browser only
+  pwaBadge.style.display = (!isStandalone() && notes.length === 0) ? 'flex' : 'none';
+
+  if (notes.length === 0) {
+    notesContainer.innerHTML = `
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <div class="empty-title">No notes yet</div>
+        <div class="empty-sub">Tap <strong>+</strong> to write your first note.<br>Everything is saved on your device.</div>
+      </div>`;
+    return;
+  }
+
+  const sorted = [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
+  notesContainer.innerHTML = `
+    <div class="grid" id="grid">
+      ${sorted.map(n => `
+        <div class="card${wiggling ? ' wiggle' : ''}" data-id="${n.id}" role="button" tabindex="0" aria-label="${escHtml(n.title || 'Untitled')}">
+          ${n.title ? `<div class="card-title">${escHtml(n.title)}</div>` : ''}
+          ${n.body  ? `<div class="card-body">${escHtml(n.body)}</div>` : ''}
+          <div class="card-date">${fmtDate(n.updatedAt)}</div>
+          <button class="card-del" data-id="${n.id}" aria-label="Delete note" tabindex="-1">×</button>
+        </div>
+      `).join('')}
+    </div>
+    ${notes.length > 1 ? '<div class="hint">Hold a note to delete it</div>' : ''}`;
+}
+
+// ── Open / close editor ───────────────────────────────────────────────────────
+function openEditor(note = null) {
+  editingId = note ? note.id : null;
+  editorHeading.textContent = note ? 'Edit Note' : 'New Note';
+  editorTitle.value = note ? note.title : '';
+  editorBody.value  = note ? note.body  : '';
+  editorOverlay.classList.add('open');
+  setTimeout(() => (note ? editorBody : editorTitle).focus(), 350);
+}
+
+function closeEditor() {
+  editorOverlay.classList.remove('open');
+  editorTitle.blur();
+  editorBody.blur();
+}
+
+function saveNote() {
+  const title = editorTitle.value.trim();
+  const body  = editorBody.value.trim();
+  if (!title && !body) { closeEditor(); return; }
+
+  if (editingId) {
+    const n = notes.find(n => n.id === editingId);
+    if (n) { n.title = title; n.body = body; n.updatedAt = Date.now(); }
+  } else {
+    notes.push({ id: uid(), title, body, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  saveNotes(notes);
+  closeEditor();
+  render();
+}
+
+// ── Delete note ───────────────────────────────────────────────────────────────
+function deleteNote(id) {
+  notes = notes.filter(n => n.id !== id);
+  saveNotes(notes);
+  if (notes.length === 0) wiggling = false;
+  render();
+}
+
+function stopWiggle() {
+  wiggling = false;
+  render();
+}
+
+// ── Install sheet ─────────────────────────────────────────────────────────────
+function openInstall() {
+  // Show "open in Safari" step only when not already in Safari/standalone
+  safariStep.style.display = isStandalone() ? 'none' : '';
+  installOverlay.classList.add('open');
+}
+
+function closeInstall() {
+  installOverlay.classList.remove('open');
+  localStorage.setItem('memo_install_seen', '1');
+}
+
+// ── Offline detection ─────────────────────────────────────────────────────────
+function updateOnlineStatus() {
+  if (!navigator.onLine) {
+    offlineBar.classList.add('show');
+  } else {
+    offlineBar.classList.remove('show');
+  }
+}
+
+// ── Event wiring ──────────────────────────────────────────────────────────────
+$('fab').addEventListener('click', () => { stopWiggle(); openEditor(); });
+$('installBtn').addEventListener('click', openInstall);
+$('pwaBadge').addEventListener('click', openInstall);
+
+$('editorCancel').addEventListener('click', closeEditor);
+$('editorSave').addEventListener('click', saveNote);
+$('installDismiss').addEventListener('click', closeInstall);
+
+// Close overlays on background tap
+editorOverlay.addEventListener('click', e => { if (e.target === editorOverlay) closeEditor(); });
+installOverlay.addEventListener('click', e => { if (e.target === installOverlay) closeInstall(); });
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeEditor(); closeInstall(); stopWiggle(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') saveNote();
+});
+
+// Note card interactions (tap to edit, long-press to wiggle)
+let longPressTimer = null;
+notesContainer.addEventListener('pointerdown', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  longPressTimer = setTimeout(() => {
+    longPressTimer = null;
+    wiggling = true;
+    render();
+    if (navigator.vibrate) navigator.vibrate(10);
+  }, 500);
+});
+
+notesContainer.addEventListener('pointerup',     () => clearTimeout(longPressTimer));
+notesContainer.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
+
+notesContainer.addEventListener('click', e => {
+  // Delete button
+  const delBtn = e.target.closest('.card-del');
+  if (delBtn) {
+    e.stopPropagation();
+    deleteNote(delBtn.dataset.id);
+    return;
+  }
+  // Tap card
+  const card = e.target.closest('.card');
+  if (!card) return;
+  if (wiggling) { stopWiggle(); return; }
+  const note = notes.find(n => n.id === card.dataset.id);
+  if (note) openEditor(note);
+});
+
+// Tap outside cards to stop wiggle
+document.addEventListener('click', e => {
+  if (wiggling && !e.target.closest('.card') && !e.target.closest('.fab')) {
+    stopWiggle();
+  }
+});
+
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ── Auto-show install prompt on first visit (Safari only) ────────────────────
+if (!isStandalone() && !localStorage.getItem('memo_install_seen')) {
+  // Small delay so the page paints first
+  setTimeout(openInstall, 1200);
+}
+
+// ── Service Worker ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+// ── Initial render ────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
