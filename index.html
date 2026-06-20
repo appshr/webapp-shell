@@ -210,8 +210,19 @@
     .editor-body-input::placeholder { color: var(--text3); }
 
     /* ── Install sheet ── */
-    .install-sheet { padding-bottom: calc(24px + var(--sb)); }
-    .install-body  { padding: 0 24px 20px; }
+    .install-sheet {
+      max-height: 92dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-bottom: 0;
+    }
+    .install-body {
+      padding: 0 24px calc(24px + var(--sb));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+    }
 
     .app-icon {
       width: 72px; height: 72px; border-radius: 16px;
@@ -666,7 +677,7 @@ document.addEventListener('click', e => {
 
 window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
-updateOnlineStatus();
+// Only react to events — don't eagerly show the banner on page load
 
 // ── Auto-show install prompt on first visit (Safari only) ────────────────────
 if (!isStandalone() && !localStorage.getItem('memo_install_seen')) {
@@ -677,7 +688,7 @@ if (!isStandalone() && !localStorage.getItem('memo_install_seen')) {
 // ── Service Worker ────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 
